@@ -1,0 +1,16 @@
+{
+  "$schema": "https://rcade.dev/manifest.schema.json",
+  "name": "nibbles",
+  "display_name": "Nibbles",
+  "description": "nibbles",
+  "visibility": "public",
+  "authors": {
+    "display_name": "Joe Mou"
+  },
+  "dependencies": [
+    {
+      "name": "@rcade/input-classic",
+      "version": "1.0.0"
+    }
+  ]
+}
