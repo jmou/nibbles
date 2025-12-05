@@ -180,6 +180,28 @@ function center(row: number, s: string) {
   text({ u: COLUMNS / 2 - s.length, v: row * 2 }, s);
 }
 
+function header() {
+  for (let u = 0; u <= U_MAX; u++) {
+    erase({ u, v: 0 });
+    erase({ u, v: 1 });
+  }
+
+  if (snakes.length === 0) return;
+
+  const p1 = snakes[0];
+  const p2 = snakes.length > 1 ? snakes[1] : null;
+
+  // TODO pad
+  const left = `${p1.score} Lives: ${p1.lives} <-${p1.name.toUpperCase()}`;
+  text({ u: 0, v: 0 }, left);
+
+  if (p2) {
+    const right = `${p2.name.toUpperCase()}-> Lives: ${p2.lives} ${p2.score}`;
+    const u = U_MAX - right.length * 2 + 1;
+    text({ u, v: 0 }, right);
+  }
+}
+
 function title(msg: string = "Nibbles!") {
   cls();
   center(0, msg);
@@ -236,10 +258,10 @@ function renderLevel() {
   cls();
 
   // Borders
-  hrule(0, 0, U_MAX);
+  hrule(2, 0, U_MAX);
   hrule(V_MAX, 0, U_MAX);
-  vrule(0, 0, V_MAX);
-  vrule(U_MAX, 0, V_MAX);
+  vrule(0, 2, V_MAX);
+  vrule(U_MAX, 2, V_MAX);
 
   const { spawns, walls } = LEVELS[level];
 
@@ -318,7 +340,7 @@ function tick() {
     } else if (SYSTEM.TWO_PLAYER) {
       snakes.length = 0;
       addSnake("Sammy", YELLOW);
-      addSnake("Jack", MAGENTA);
+      addSnake("Jake", MAGENTA);
       level = 0;
       nextLevel();
     }
@@ -395,6 +417,8 @@ function tick() {
     for (const sammy of snakes) {
       apply(sammy.front, sammy.color, graduate);
     }
+
+    header();
   }
 
   ctx.putImageData(bitmap, 0, 0);
