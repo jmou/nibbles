@@ -1,5 +1,6 @@
 import { PLAYER_1, PLAYER_2, SYSTEM } from "@rcade/plugin-input-classic";
 import "./style.css";
+import { CELL, GLYPHS } from "./glyphs";
 
 const SCREEN_WIDTH = 320;
 const SCREEN_HEIGHT = 240;
@@ -19,20 +20,15 @@ interface ScreenPosition {
   y: number;
 }
 
-interface TextPosition {
-  row: number;
-  col: number;
-}
-
-interface GamePosition {
+interface GridPosition {
   u: number;
   v: number;
 }
 
 const U_MAX = COLUMNS - 1;
 const V_MAX = ROWS * 2 - 1;
-const U_WIDTH = PIXELS_PER_COLUMN;
-const V_HEIGHT = PIXELS_PER_ROW / 2;
+const CELL_WIDTH = PIXELS_PER_COLUMN;
+const CELL_HEIGHT = PIXELS_PER_ROW / 2;
 
 type Heading = number;
 const RIGHT = 0;
@@ -53,8 +49,8 @@ const TRIAL = 0;
 const MATURE = 255;
 
 interface Sammy {
-  front: GamePosition;
-  trail: GamePosition[];
+  front: GridPosition;
+  trail: GridPosition[];
   length: number;
   heading: Heading;
   color: Color;
@@ -78,14 +74,14 @@ function cls() {
   }
 }
 
-function paint(pos: ScreenPosition, color: Color, alpha: Alpha = MATURE) {
-  const { x, y } = pos;
-  const { r, g, b } = color;
+type PixelOp = (pos: ScreenPosition, color: Color) => boolean;
+
+function paint({ x, y }: ScreenPosition, color: Color, alpha: Alpha = MATURE) {
   const index = (y * SCREEN_WIDTH + x) * 4;
   if (index + 3 >= bitmap.data.length) return false;
-  bitmap.data[index] = r;
-  bitmap.data[index + 1] = g;
-  bitmap.data[index + 2] = b;
+  bitmap.data[index] = color.r;
+  bitmap.data[index + 1] = color.g;
+  bitmap.data[index + 2] = color.b;
   bitmap.data[index + 3] = alpha;
   return true;
 }
@@ -115,21 +111,23 @@ function graduate(pos: ScreenPosition, _color: Color) {
   return true;
 }
 
-function fillRect(
-  x: number,
-  y: number,
-  width: number,
-  height: number,
+function blit(
+  pos: ScreenPosition | GridPosition,
+  glyph: boolean[][],
   color: Color,
-  fn: (pos: ScreenPosition, color: Color) => boolean = paint
+  op: PixelOp = paint
 ) {
+  if ("u" in pos) {
+    const x = pos.u * CELL_WIDTH;
+    const y = pos.v * CELL_HEIGHT;
+    pos = { x, y };
+  }
+
   let all = true;
-  for (let dy = 0; dy < height; dy++) {
-    for (let dx = 0; dx < width; dx++) {
-      const px = Math.floor(x + dx);
-      const py = Math.floor(y + dy);
-      if (px >= 0 && px < SCREEN_WIDTH && py >= 0 && py < SCREEN_HEIGHT) {
-        const one = fn({ x: px, y: py }, color);
+  for (const [dy, row] of glyph.entries()) {
+    for (const [dx, fill] of row.entries()) {
+      if (fill) {
+        const one = op({ x: pos.x + dx, y: pos.y + dy }, color);
         all &&= one;
       }
     }
@@ -138,30 +136,19 @@ function fillRect(
 }
 
 function apply(
-  pos: ScreenPosition | GamePosition,
+  pos: ScreenPosition | GridPosition,
   color: Color,
-  fn: (pos: ScreenPosition, color: Color) => boolean = paint
+  op: PixelOp = paint
 ) {
   if ("x" in pos) {
     return trial(pos, color);
   } else {
-    return fillRect(
-      pos.u * U_WIDTH,
-      pos.v * V_HEIGHT,
-      U_WIDTH,
-      V_HEIGHT,
-      color,
-      fn
-    );
+    return blit(pos, CELL, color, op);
   }
 }
 
-function erase(pos: ScreenPosition | GamePosition) {
-  if ("x" in pos) {
-    trial(pos, BLUE);
-  } else {
-    fillRect(pos.u * U_WIDTH, pos.v * V_HEIGHT, U_WIDTH, V_HEIGHT, BLUE);
-  }
+function erase(pos: GridPosition) {
+  blit(pos, CELL, BLUE);
 }
 
 function hrule(v: number, u1: number, u2: number) {
@@ -172,21 +159,20 @@ function vrule(u: number, v1: number, v2: number) {
   for (let v = v1; v <= v2; v++) apply({ u, v }, SALMON);
 }
 
-function text(row: number, col: number, s: string) {
-  // TODO bitmap font
-  const x = Math.floor(col * PIXELS_PER_COLUMN);
-  const y = Math.floor(row * PIXELS_PER_ROW);
-  fillRect(x, y, s.length * 3, 5, WHITE);
+function text(pos: GridPosition, s: string) {
+  for (const [i, ch] of [...s].entries()) {
+    blit({ u: pos.u + i * 2, v: pos.v }, GLYPHS[ch], WHITE);
+  }
 }
 
-function spawn(front: GamePosition, heading: Heading, color: Color) {
+function spawn(front: GridPosition, heading: Heading, color: Color) {
   snakes.push({ front, trail: [], length: 1, heading, color });
 }
 
 function title() {
   cls();
   apply({ u: 0, v: 0 }, SALMON);
-  text(5, 5, "N I B B L E S");
+  text({ u: 5, v: 5 }, "N I B B L E S");
 }
 
 function reinitSnakes(
@@ -224,7 +210,7 @@ function end() {
   state = "post";
 }
 
-function add(pos: GamePosition, heading: Heading, distance: number = 1) {
+function add(pos: GridPosition, heading: Heading, distance: number = 1) {
   let { u, v } = pos;
   u += distance * Math.cos(heading);
   v += distance * Math.sin(heading);
