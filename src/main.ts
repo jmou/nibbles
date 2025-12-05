@@ -50,7 +50,7 @@ const BLACK = { r: 0, g: 0, b: 0 }; // invalid color
 type Alpha = number;
 const TRIAL = 0;
 const MATURE = 255;
-const YOUNG = MATURE - QUANTIZATION - 1;
+const YOUNG = MATURE - 2 * QUANTIZATION;
 
 let collectable = 1;
 let collectablePosition = { u: 0, v: 0 };
@@ -148,6 +148,21 @@ function graduate(pos: ScreenPosition, _color: Color) {
   const index = (y * SCREEN_WIDTH + x) * 4;
   bitmap.data[index + 3] = YOUNG;
   return true;
+}
+
+function age(pos: GridPosition) {
+  const x0 = Math.round(pos.u * CELL_WIDTH);
+  const y0 = Math.round(pos.v * CELL_HEIGHT);
+
+  // FIXME dimensions should be clamped
+  for (let x = x0 - 10; x < x0 + 10; x++) {
+    for (let y = y0 - 10; y < y0 + 10; y++) {
+      const index = (y * SCREEN_WIDTH + x) * 4;
+      if (bitmap.data[index + 3] >= YOUNG && bitmap.data[index + 3] < MATURE) {
+        bitmap.data[index + 3]++;
+      }
+    }
+  }
 }
 
 function blit(
@@ -250,7 +265,7 @@ function addSnake(name: string, color: Color) {
   snakes.push({
     front: { u: 0, v: 0 },
     trail: [],
-    length: 1,
+    length: QUANTIZATION,
     heading: RIGHT,
     lives: 5,
     score: 0,
@@ -412,7 +427,7 @@ function renderLevel() {
     snake.front = { u, v };
     snake.trail = [];
     snake.heading = heading;
-    snake.length = 1;
+    snake.length = QUANTIZATION;
   }
 }
 
@@ -507,6 +522,11 @@ function tick() {
       return;
     }
 
+    for (const sammy of snakes) {
+      // FIXME this will overage if two snake fronts are too close
+      age(sammy.front);
+    }
+
     turn(snakes[0], PLAYER_1.DPAD);
     if (snakes.length > 1) turn(snakes[1], PLAYER_2.DPAD);
 
@@ -523,7 +543,7 @@ function tick() {
     for (const sammy of snakes) {
       if (blit(sammy.front, CELL, WHITE, mature, { all: false })) {
         // TODO tweak
-        sammy.length += collectable * 2;
+        sammy.length += collectable * 4 * QUANTIZATION;
         sammy.score += collectable * 10;
         collected = true;
       }
