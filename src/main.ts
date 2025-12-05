@@ -11,7 +11,7 @@ const ROWS = 24;
 const PIXELS_PER_COLUMN = SCREEN_WIDTH / COLUMNS;
 const PIXELS_PER_ROW = SCREEN_HEIGHT / ROWS;
 
-type AppState = "title" | "post" | "level1";
+type AppState = "title" | "dialog" | "level1";
 
 let state: AppState = "title";
 
@@ -48,15 +48,18 @@ type Alpha = number;
 const TRIAL = 0;
 const MATURE = 255;
 
-interface Sammy {
+interface Snake {
   front: GridPosition;
   trail: GridPosition[];
   length: number;
   heading: Heading;
+  lives: number;
+  score: number;
+  name: string;
   color: Color;
 }
 
-const snakes: Sammy[] = [];
+const snakes: Snake[] = [];
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
 app.innerHTML = `
@@ -160,19 +163,32 @@ function vrule(u: number, v1: number, v2: number) {
 }
 
 function text(pos: GridPosition, s: string) {
-  for (const [i, ch] of [...s].entries()) {
+  for (const [i, ch] of [...s.toUpperCase()].entries()) {
     blit({ u: pos.u + i * 2, v: pos.v }, GLYPHS[ch], WHITE);
   }
 }
 
-function spawn(front: GridPosition, heading: Heading, color: Color) {
-  snakes.push({ front, trail: [], length: 1, heading, color });
+function center(row: number, s: string) {
+  text({ u: COLUMNS / 2 - s.length, v: row * 2 }, s);
 }
 
 function title() {
   cls();
-  apply({ u: 0, v: 0 }, SALMON);
-  text({ u: 5, v: 5 }, "N I B B L E S");
+  center(0, "Nibbles!");
+  center(11, "Press P1 or P2");
+}
+
+function spawn(name: string, color: Color) {
+  snakes.push({
+    front: { u: 0, v: 0 },
+    trail: [],
+    length: 1,
+    heading: RIGHT,
+    lives: 5,
+    score: 0,
+    name,
+    color,
+  });
 }
 
 function reinitSnakes(
@@ -184,10 +200,14 @@ function reinitSnakes(
   heading1: Heading
 ) {
   snakes[0].front = { u: u0, v: v0 };
+  snakes[0].trail = [];
   snakes[0].heading = heading0;
+  snakes[0].length = 1;
   if (snakes.length > 1) {
     snakes[1].front = { u: u1, v: v1 };
+    snakes[1].trail = [];
     snakes[1].heading = heading1;
+    snakes[1].length = 1;
   }
 }
 
@@ -196,7 +216,7 @@ function start(level: 1) {
   cls();
 
   if (level === 1) {
-    reinitSnakes(50, 25, LEFT, 30, 25, RIGHT);
+    reinitSnakes(50, 25, RIGHT, 30, 25, LEFT);
   }
 
   // Borders
@@ -206,8 +226,11 @@ function start(level: 1) {
   vrule(U_MAX, 0, V_MAX);
 }
 
-function end() {
-  state = "post";
+function dialog(msg: string) {
+  for (const [i, line] of msg.split("\n").entries()) {
+    center(12 + i, line);
+  }
+  state = "dialog";
 }
 
 function add(pos: GridPosition, heading: Heading, distance: number = 1) {
@@ -217,7 +240,7 @@ function add(pos: GridPosition, heading: Heading, distance: number = 1) {
   return { u, v };
 }
 
-function turn(sammy: Sammy, dpad: typeof PLAYER_1.DPAD) {
+function turn(sammy: Snake, dpad: typeof PLAYER_1.DPAD) {
   // TODO feels sticky
   if (dpad.up && sammy.heading !== DOWN) {
     sammy.heading = UP;
@@ -233,13 +256,15 @@ function turn(sammy: Sammy, dpad: typeof PLAYER_1.DPAD) {
 function tick() {
   if (state === "title") {
     if (SYSTEM.ONE_PLAYER) {
-      spawn({ u: 20, v: 5 }, RIGHT, YELLOW);
+      spawn("Sammy", YELLOW);
       start(1);
     } else if (SYSTEM.TWO_PLAYER) {
-      spawn({ u: 20, v: 5 }, RIGHT, YELLOW);
-      spawn({ u: 60, v: 25 }, LEFT, MAGENTA);
+      spawn("Sammy", YELLOW);
+      spawn("Jack", MAGENTA);
       start(1);
     }
+  } else if (state === "dialog") {
+    if (PLAYER_1.A || PLAYER_1.B || PLAYER_2.A || PLAYER_2.B) start(1);
   } else if (state === "level1") {
     turn(snakes[0], PLAYER_1.DPAD);
     if (snakes.length > 1) turn(snakes[1], PLAYER_2.DPAD);
@@ -263,10 +288,12 @@ function tick() {
       (sammy) => !apply(sammy.front, sammy.color, equals)
     );
     if (dead.length > 0) {
-      for (const [u, sammy] of dead.entries()) {
-        apply({ u, v: 0 }, sammy.color);
+      for (const snake of dead) snake.lives--;
+      if (dead.some(({ lives }) => lives === 0)) {
+        dialog("G A M E   O V E R");
+      } else {
+        dialog(dead.map(({ name }) => `${name} Dies!`).join("\n"));
       }
-      end();
       // FIXME resolve trial colors
     }
 
