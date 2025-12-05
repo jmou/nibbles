@@ -252,6 +252,116 @@ const LEVELS: Record<string, Level> = {
     ],
     walls: () => hrule(25, 20, 60),
   },
+  3: {
+    spawns: [
+      [30, 25, DOWN],
+      [50, 25, UP],
+    ],
+    walls: () => {
+      vrule(20, 10, 40);
+      vrule(60, 10, 40);
+    },
+  },
+  4: {
+    spawns: [
+      [20, 43, RIGHT],
+      [60, 7, LEFT],
+    ],
+    walls: () => {
+      vrule(20, 4, 30);
+      vrule(60, 23, 49);
+      hrule(38, 2, 40);
+      hrule(15, 41, 79);
+    },
+  },
+  5: {
+    spawns: [
+      [30, 25, DOWN],
+      [50, 25, UP],
+    ],
+    walls: () => {
+      vrule(21, 13, 39);
+      vrule(59, 13, 39);
+      hrule(11, 23, 57);
+      hrule(41, 23, 57);
+    },
+  },
+  6: {
+    spawns: [
+      [15, 43, UP],
+      [65, 7, DOWN],
+    ],
+    walls: () => {
+      for (let v = 4; v <= 49; v++) {
+        if (v > 30 || v < 23) {
+          apply({ u: 10, v }, SALMON);
+          apply({ u: 20, v }, SALMON);
+          apply({ u: 30, v }, SALMON);
+          apply({ u: 40, v }, SALMON);
+          apply({ u: 50, v }, SALMON);
+          apply({ u: 60, v }, SALMON);
+          apply({ u: 70, v }, SALMON);
+        }
+      }
+    },
+  },
+  7: {
+    spawns: [
+      [15, 43, UP],
+      [65, 7, DOWN],
+    ],
+    walls: () => {
+      for (let v = 4; v <= 49; v += 2) {
+        apply({ u: 40, v }, SALMON);
+      }
+    },
+  },
+  8: {
+    spawns: [
+      [15, 43, UP],
+      [65, 7, DOWN],
+    ],
+    walls: () => {
+      for (let v = 4; v <= 40; v++) {
+        apply({ u: 10, v }, SALMON);
+        apply({ u: 20, v: 53 - v }, SALMON);
+        apply({ u: 30, v }, SALMON);
+        apply({ u: 40, v: 53 - v }, SALMON);
+        apply({ u: 50, v }, SALMON);
+        apply({ u: 60, v: 53 - v }, SALMON);
+        apply({ u: 70, v }, SALMON);
+      }
+    },
+  },
+  9: {
+    spawns: [
+      [5, 15, DOWN],
+      [75, 40, UP],
+    ],
+    walls: () => {
+      for (let v = 6; v <= 47; v++) {
+        apply({ u: v, v }, SALMON);
+        apply({ u: v + 28, v }, SALMON);
+      }
+    },
+  },
+  10: {
+    spawns: [
+      [15, 43, UP],
+      [65, 7, DOWN],
+    ],
+    walls: () => {
+      for (let v = 4; v <= 49; v += 2) {
+        apply({ u: 10, v }, SALMON);
+        apply({ u: 20, v: v + 1 }, SALMON);
+        apply({ u: 30, v }, SALMON);
+        apply({ u: 40, v: v + 1 }, SALMON);
+        apply({ u: 50, v }, SALMON);
+        apply({ u: 60, v: v + 1 }, SALMON);
+        apply({ u: 70, v }, SALMON);
+      }
+    },
+  },
 };
 
 function renderLevel() {
