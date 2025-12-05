@@ -171,7 +171,7 @@ function vrule(u: number, v1: number, v2: number) {
 }
 
 function text(pos: GridPosition, s: string) {
-  for (const [i, ch] of [...s.toUpperCase()].entries()) {
+  for (const [i, ch] of [...s].entries()) {
     blit({ u: pos.u + i * 2, v: pos.v }, GLYPHS[ch], WHITE);
   }
 }
