@@ -10,7 +10,7 @@ const ROWS = 24;
 const PIXELS_PER_COLUMN = SCREEN_WIDTH / COLUMNS;
 const PIXELS_PER_ROW = SCREEN_HEIGHT / ROWS;
 
-type AppState = "title" | "level1";
+type AppState = "title" | "post" | "level1";
 
 let state: AppState = "title";
 
@@ -46,6 +46,11 @@ const WHITE = { r: 255, g: 255, b: 255 };
 const YELLOW = { r: 255, g: 255, b: 0 };
 const MAGENTA = { r: 255, g: 0, b: 255 };
 const SALMON = { r: 255, g: 85, b: 85 };
+const BLACK = { r: 0, g: 0, b: 0 }; // invalid color
+
+type Alpha = number;
+const TRIAL = 0;
+const MATURE = 255;
 
 interface Sammy {
   front: GamePosition;
@@ -73,14 +78,41 @@ function cls() {
   }
 }
 
-function pixel(pos: ScreenPosition, color: Color) {
+function paint(pos: ScreenPosition, color: Color, alpha: Alpha = MATURE) {
   const { x, y } = pos;
   const { r, g, b } = color;
   const index = (y * SCREEN_WIDTH + x) * 4;
+  if (index + 3 >= bitmap.data.length) return false;
   bitmap.data[index] = r;
   bitmap.data[index + 1] = g;
   bitmap.data[index + 2] = b;
-  bitmap.data[index + 3] = 255;
+  bitmap.data[index + 3] = alpha;
+  return true;
+}
+
+function trial(pos: ScreenPosition, color: Color) {
+  if (!equals(pos, BLUE, MATURE)) color = BLACK;
+  // FIXME only paint over mature blue or trial colors
+  paint(pos, color, TRIAL);
+  return true;
+}
+
+function equals(pos: ScreenPosition, color: Color, alpha: Alpha = TRIAL) {
+  const { x, y } = pos;
+  const index = (y * SCREEN_WIDTH + x) * 4;
+  return (
+    bitmap.data[index] === color.r &&
+    bitmap.data[index + 1] === color.g &&
+    bitmap.data[index + 2] === color.b &&
+    bitmap.data[index + 3] === alpha
+  );
+}
+
+function graduate(pos: ScreenPosition, _color: Color) {
+  const { x, y } = pos;
+  const index = (y * SCREEN_WIDTH + x) * 4;
+  bitmap.data[index + 3] = MATURE;
+  return true;
 }
 
 function fillRect(
@@ -88,33 +120,56 @@ function fillRect(
   y: number,
   width: number,
   height: number,
-  color: Color
+  color: Color,
+  fn: (pos: ScreenPosition, color: Color) => boolean = paint
 ) {
+  let all = true;
   for (let dy = 0; dy < height; dy++) {
     for (let dx = 0; dx < width; dx++) {
       const px = Math.floor(x + dx);
       const py = Math.floor(y + dy);
       if (px >= 0 && px < SCREEN_WIDTH && py >= 0 && py < SCREEN_HEIGHT) {
-        pixel({ x: px, y: py }, color);
+        const one = fn({ x: px, y: py }, color);
+        all &&= one;
       }
     }
   }
+  return all;
 }
 
-function set(pos: ScreenPosition | GamePosition, color: Color) {
+function apply(
+  pos: ScreenPosition | GamePosition,
+  color: Color,
+  fn: (pos: ScreenPosition, color: Color) => boolean = paint
+) {
   if ("x" in pos) {
-    pixel(pos, color);
+    return trial(pos, color);
   } else {
-    fillRect(pos.u * U_WIDTH, pos.v * V_HEIGHT, U_WIDTH, V_HEIGHT, color);
+    return fillRect(
+      pos.u * U_WIDTH,
+      pos.v * V_HEIGHT,
+      U_WIDTH,
+      V_HEIGHT,
+      color,
+      fn
+    );
+  }
+}
+
+function erase(pos: ScreenPosition | GamePosition) {
+  if ("x" in pos) {
+    trial(pos, BLUE);
+  } else {
+    fillRect(pos.u * U_WIDTH, pos.v * V_HEIGHT, U_WIDTH, V_HEIGHT, BLUE);
   }
 }
 
 function hrule(v: number, u1: number, u2: number) {
-  for (let u = u1; u <= u2; u++) set({ u, v }, SALMON);
+  for (let u = u1; u <= u2; u++) apply({ u, v }, SALMON);
 }
 
 function vrule(u: number, v1: number, v2: number) {
-  for (let v = v1; v <= v2; v++) set({ u, v }, SALMON);
+  for (let v = v1; v <= v2; v++) apply({ u, v }, SALMON);
 }
 
 function text(row: number, col: number, s: string) {
@@ -130,7 +185,7 @@ function spawn(front: GamePosition, heading: Heading, color: Color) {
 
 function title() {
   cls();
-  set({ u: 0, v: 0 }, SALMON);
+  apply({ u: 0, v: 0 }, SALMON);
   text(5, 5, "N I B B L E S");
 }
 
@@ -163,6 +218,10 @@ function start(level: 1) {
   hrule(V_MAX, 0, U_MAX);
   vrule(0, 0, V_MAX);
   vrule(U_MAX, 0, V_MAX);
+}
+
+function end() {
+  state = "post";
 }
 
 function add(pos: GamePosition, heading: Heading, distance: number = 1) {
@@ -203,10 +262,30 @@ function tick() {
       sammy.trail.push(sammy.front);
       sammy.front = add(sammy.front, sammy.heading);
       if (sammy.trail.length > sammy.length) {
-        const [erase] = sammy.trail.splice(0, 1);
-        set(erase, BLUE);
+        const [vacated] = sammy.trail.splice(0, 1);
+        erase(vacated);
       }
-      set(sammy.front, sammy.color);
+    }
+
+    // Extend snakes after truncating trail to allow snake front to occupy
+    // vacated tail.
+    for (const sammy of snakes) {
+      apply(sammy.front, sammy.color, trial);
+    }
+
+    const dead = snakes.filter(
+      (sammy) => !apply(sammy.front, sammy.color, equals)
+    );
+    if (dead.length > 0) {
+      for (const [u, sammy] of dead.entries()) {
+        apply({ u, v: 0 }, sammy.color);
+      }
+      end();
+      // FIXME resolve trial colors
+    }
+
+    for (const sammy of snakes) {
+      apply(sammy.front, sammy.color, graduate);
     }
   }
 
@@ -215,7 +294,7 @@ function tick() {
 
 title();
 
-const speed = 99;
+const speed = 50;
 const speedScale = 1 - (speed - 50) / 100;
 const renderInterval = (speedScale * 1000) / 10;
 setInterval(tick, renderInterval);
