@@ -1,8 +1,8 @@
 {
   "$schema": "https://rcade.dev/manifest.schema.json",
   "name": "nibbles",
-  "display_name": "Nibbles",
-  "description": "nibbles",
+  "display_name": "NIBBLES.BAS",
+  "description": "QBasic Nibbles clone with a spin",
   "visibility": "public",
   "authors": {
     "display_name": "Joe Mou"
