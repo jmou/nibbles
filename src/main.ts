@@ -4,8 +4,11 @@ import "./style.css";
 const SCREEN_WIDTH = 320;
 const SCREEN_HEIGHT = 240;
 
-const PIXELS_PER_COLUMN = SCREEN_WIDTH / 80;
-const PIXELS_PER_ROW = SCREEN_HEIGHT / 24;
+const COLUMNS = 80;
+const ROWS = 24;
+
+const PIXELS_PER_COLUMN = SCREEN_WIDTH / COLUMNS;
+const PIXELS_PER_ROW = SCREEN_HEIGHT / ROWS;
 
 type AppState = "title" | "level1";
 
@@ -26,8 +29,8 @@ interface GamePosition {
   v: number;
 }
 
-const U_MAX = 78;
-const V_MAX = 22;
+const U_MAX = COLUMNS - 1;
+const V_MAX = ROWS * 2 - 1;
 const U_WIDTH = PIXELS_PER_COLUMN;
 const V_HEIGHT = PIXELS_PER_ROW / 2;
 
@@ -106,6 +109,14 @@ function set(pos: ScreenPosition | GamePosition, color: Color) {
   }
 }
 
+function hrule(v: number, u1: number, u2: number) {
+  for (let u = u1; u <= u2; u++) set({ u, v }, SALMON);
+}
+
+function vrule(u: number, v1: number, v2: number) {
+  for (let v = v1; v <= v2; v++) set({ u, v }, SALMON);
+}
+
 function text(row: number, col: number, s: string) {
   // TODO bitmap font
   const x = Math.floor(col * PIXELS_PER_COLUMN);
@@ -123,9 +134,35 @@ function title() {
   text(5, 5, "N I B B L E S");
 }
 
+function reinitSnakes(
+  u0: number,
+  v0: number,
+  heading0: Heading,
+  u1: number,
+  v1: number,
+  heading1: Heading
+) {
+  snakes[0].front = { u: u0, v: v0 };
+  snakes[0].heading = heading0;
+  if (snakes.length > 1) {
+    snakes[1].front = { u: u1, v: v1 };
+    snakes[1].heading = heading1;
+  }
+}
+
 function start(level: 1) {
   state = `level${level}`;
   cls();
+
+  if (level === 1) {
+    reinitSnakes(50, 25, LEFT, 30, 25, RIGHT);
+  }
+
+  // Borders
+  hrule(0, 0, U_MAX);
+  hrule(V_MAX, 0, U_MAX);
+  vrule(0, 0, V_MAX);
+  vrule(U_MAX, 0, V_MAX);
 }
 
 function add(pos: GamePosition, heading: Heading, distance: number = 1) {
