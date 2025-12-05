@@ -190,13 +190,29 @@ function blit(
   return ret;
 }
 
+function line(pos: GridPosition, normal: Heading, color: Color, op: PixelOp) {
+  const x = Math.round(pos.u * CELL_WIDTH);
+  const y = Math.round(pos.v * CELL_HEIGHT);
+  // pos = { x, y };
+  return op({ x, y }, color);
+}
+
 function apply(
-  pos: ScreenPosition | GridPosition,
+  // TODO clean up
+  pos: ScreenPosition | GridPosition | Snake,
   color: Color,
   op: PixelOp = paint
 ) {
-  if ("x" in pos) {
-    return trial(pos, color);
+  let continuous: Snake | null = null;
+  if ("quanta" in pos) {
+    if (pos.quanta == null) continuous = pos;
+    pos = pos.front;
+  }
+
+  if (continuous) {
+    return line(continuous.front, continuous.heading, color, op);
+  } else if ("x" in pos) {
+    return op(pos, color);
   } else {
     return blit(pos, CELL, color, op);
   }
