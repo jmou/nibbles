@@ -11,7 +11,10 @@ const ROWS = 24; // QBasic used 25 rows
 const PIXELS_PER_COLUMN = SCREEN_WIDTH / COLUMNS;
 const PIXELS_PER_ROW = SCREEN_HEIGHT / ROWS;
 
-type AppState = "title" | "pre" | "level" | "post";
+const QUANTIZATION = 3;
+const VELOCITY = 1 / QUANTIZATION;
+
+type AppState = "title" | "pre" | "level" | "post" | "retry";
 
 let state: AppState = "title";
 
@@ -47,9 +50,16 @@ const BLACK = { r: 0, g: 0, b: 0 }; // invalid color
 type Alpha = number;
 const TRIAL = 0;
 const MATURE = 255;
+const YOUNG = MATURE - QUANTIZATION - 1;
 
 let collectable = 1;
 let collectablePosition = { u: 0, v: 0 };
+
+// XXX trail
+interface Segment {
+  pos: GridPosition;
+  heading: number | null;
+}
 
 interface Snake {
   front: GridPosition;
@@ -58,6 +68,7 @@ interface Snake {
   heading: Heading;
   lives: number;
   score: number;
+  quanta: number;
   name: string;
   color: Color;
 }
@@ -93,9 +104,15 @@ function paint({ x, y }: ScreenPosition, color: Color, alpha: Alpha = MATURE) {
 }
 
 function trial(pos: ScreenPosition, color: Color) {
-  if (!mature(pos, BLUE)) color = BLACK;
-  // FIXME only paint over mature blue or trial colors
-  paint(pos, color, TRIAL);
+  const collision = !mature(pos, BLUE);
+
+  // TODO clean up
+  const { x, y } = pos;
+  const index = (y * SCREEN_WIDTH + x) * 4;
+  if (!collision || bitmap.data[index + 3] === TRIAL) {
+    paint(pos, color, TRIAL);
+  }
+
   return true;
 }
 
@@ -114,10 +131,22 @@ function mature(pos: ScreenPosition, color: Color) {
   return equals(pos, color, MATURE);
 }
 
+// TODO dedupe w/ equals
+function safe(pos: ScreenPosition, color: Color) {
+  const { x, y } = pos;
+  const index = (y * SCREEN_WIDTH + x) * 4;
+  return (
+    bitmap.data[index] === color.r &&
+    bitmap.data[index + 1] === color.g &&
+    bitmap.data[index + 2] === color.b &&
+    bitmap.data[index + 3] < MATURE
+  );
+}
+
 function graduate(pos: ScreenPosition, _color: Color) {
   const { x, y } = pos;
   const index = (y * SCREEN_WIDTH + x) * 4;
-  bitmap.data[index + 3] = MATURE;
+  bitmap.data[index + 3] = YOUNG;
   return true;
 }
 
@@ -129,8 +158,8 @@ function blit(
   { all = true }: { all?: boolean } = {}
 ) {
   if ("u" in pos) {
-    const x = pos.u * CELL_WIDTH;
-    const y = pos.v * CELL_HEIGHT;
+    const x = Math.round(pos.u * CELL_WIDTH);
+    const y = Math.round(pos.v * CELL_HEIGHT);
     pos = { x, y };
   }
 
@@ -225,6 +254,7 @@ function addSnake(name: string, color: Color) {
     heading: RIGHT,
     lives: 5,
     score: 0,
+    quanta: QUANTIZATION,
     name,
     color,
   });
@@ -407,7 +437,7 @@ function dialog(msg: string) {
   }
 }
 
-function add(pos: GridPosition, heading: Heading, distance: number = 1) {
+function add(pos: GridPosition, heading: Heading, distance: number = VELOCITY) {
   let { u, v } = pos;
   u += distance * Math.cos(heading);
   v += distance * Math.sin(heading);
@@ -465,7 +495,12 @@ function tick() {
     }
   } else if (state === "post") {
     if (PLAYER_1.A || PLAYER_1.B || PLAYER_2.A || PLAYER_2.B) nextLevel();
-  } else if (state.startsWith("level")) {
+  } else if (state === "retry") {
+    if (PLAYER_1.A || PLAYER_1.B || PLAYER_2.A || PLAYER_2.B) {
+      renderLevel();
+      state = "level";
+    }
+  } else if (state === "level") {
     // Skip level debug cheat.
     if (PLAYER_1.A && PLAYER_1.B && PLAYER_2.A && PLAYER_2.B) {
       nextLevel();
@@ -487,7 +522,6 @@ function tick() {
     let collected = false;
     for (const sammy of snakes) {
       if (blit(sammy.front, CELL, WHITE, mature, { all: false })) {
-        console.log("white");
         // TODO tweak
         sammy.length += collectable * 2;
         sammy.score += collectable * 10;
@@ -511,15 +545,16 @@ function tick() {
     }
 
     const dead = snakes.filter(
-      (sammy) => !apply(sammy.front, sammy.color, equals)
+      (sammy) => !apply(sammy.front, sammy.color, safe)
     );
     if (dead.length > 0) {
+      // XXX losing lives too fast?
       for (const snake of dead) snake.lives--;
       if (dead.some(({ lives }) => lives === 0)) {
         lose();
       } else {
         dialog(dead.map(({ name }) => `${name} Dies!`).join("\n"));
-        state = "post";
+        state = "retry";
       }
       // FIXME resolve trial colors
     }
@@ -539,5 +574,5 @@ title();
 
 const speed = 50;
 const speedScale = 1 - (speed - 50) / 100;
-const renderInterval = (speedScale * 1000) / 10;
+const renderInterval = (speedScale * 1000) / 30;
 setInterval(tick, renderInterval);
