@@ -1,4 +1,8 @@
 import { PLAYER_1, PLAYER_2, SYSTEM } from "@rcade/plugin-input-classic";
+import {
+  PLAYER_1 as SPINNER_1,
+  PLAYER_2 as SPINNER_2,
+} from "@rcade/plugin-input-spinners";
 import "./style.css";
 import { CELL, GLYPHS } from "./glyphs";
 
@@ -71,6 +75,8 @@ interface Snake {
   quanta: number | null;
   name: string;
   color: Color;
+  // TODO hack
+  lastSpinner: number | null;
 }
 
 const snakes: Snake[] = [];
@@ -288,6 +294,7 @@ function addSnake(name: string, color: Color) {
     quanta: QUANTIZATION,
     name,
     color,
+    lastSpinner: null,
   });
 }
 
@@ -488,18 +495,37 @@ function placeCollectable() {
   }
 }
 
-function turn(sammy: Snake, dpad: typeof PLAYER_1.DPAD) {
+function turn(
+  sammy: Snake,
+  dpad: typeof PLAYER_1.DPAD,
+  spinner: typeof SPINNER_1.SPINNER
+) {
+  if (sammy.lastSpinner == null) {
+    console.log(spinner);
+    sammy.lastSpinner = spinner.angle;
+  } else if (spinner.angle != sammy.lastSpinner) {
+    console.log(spinner);
+    sammy.heading += spinner.angle - sammy.lastSpinner;
+    sammy.lastSpinner = spinner.angle;
+    sammy.quanta = null;
+  }
+
   // TODO even stickier
   if (sammy.quanta) return;
   // TODO feels sticky
   if (dpad.up && sammy.heading !== DOWN) {
     sammy.heading = UP;
+    // TODO clean up
+    sammy.quanta = 0;
   } else if (dpad.down && sammy.heading !== UP) {
     sammy.heading = DOWN;
+    sammy.quanta = 0;
   } else if (dpad.left && sammy.heading !== RIGHT) {
     sammy.heading = LEFT;
+    sammy.quanta = 0;
   } else if (dpad.right && sammy.heading !== LEFT) {
     sammy.heading = RIGHT;
+    sammy.quanta = 0;
   }
 }
 
@@ -547,8 +573,8 @@ function tick() {
       if (sammy.quanta != null) sammy.quanta--;
     }
 
-    turn(snakes[0], PLAYER_1.DPAD);
-    if (snakes.length > 1) turn(snakes[1], PLAYER_2.DPAD);
+    turn(snakes[0], PLAYER_1.DPAD, SPINNER_1.SPINNER);
+    if (snakes.length > 1) turn(snakes[1], PLAYER_2.DPAD, SPINNER_2.SPINNER);
 
     for (const sammy of snakes) {
       if (sammy.quanta) {
