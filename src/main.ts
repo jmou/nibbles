@@ -6,7 +6,7 @@ const SCREEN_WIDTH = 320;
 const SCREEN_HEIGHT = 240;
 
 const COLUMNS = 80;
-const ROWS = 24;
+const ROWS = 24; // QBasic used 25 rows
 
 const PIXELS_PER_COLUMN = SCREEN_WIDTH / COLUMNS;
 const PIXELS_PER_ROW = SCREEN_HEIGHT / ROWS;
@@ -47,6 +47,9 @@ const BLACK = { r: 0, g: 0, b: 0 }; // invalid color
 type Alpha = number;
 const TRIAL = 0;
 const MATURE = 255;
+
+let collectable = 1;
+let collectablePosition = { u: 0, v: 0 };
 
 interface Snake {
   front: GridPosition;
@@ -90,7 +93,7 @@ function paint({ x, y }: ScreenPosition, color: Color, alpha: Alpha = MATURE) {
 }
 
 function trial(pos: ScreenPosition, color: Color) {
-  if (!equals(pos, BLUE, MATURE)) color = BLACK;
+  if (!mature(pos, BLUE)) color = BLACK;
   // FIXME only paint over mature blue or trial colors
   paint(pos, color, TRIAL);
   return true;
@@ -107,6 +110,10 @@ function equals(pos: ScreenPosition, color: Color, alpha: Alpha = TRIAL) {
   );
 }
 
+function mature(pos: ScreenPosition, color: Color) {
+  return equals(pos, color, MATURE);
+}
+
 function graduate(pos: ScreenPosition, _color: Color) {
   const { x, y } = pos;
   const index = (y * SCREEN_WIDTH + x) * 4;
@@ -118,7 +125,8 @@ function blit(
   pos: ScreenPosition | GridPosition,
   glyph: boolean[][],
   color: Color,
-  op: PixelOp = paint
+  op: PixelOp = paint,
+  { all = true }: { all?: boolean } = {}
 ) {
   if ("u" in pos) {
     const x = pos.u * CELL_WIDTH;
@@ -126,16 +134,16 @@ function blit(
     pos = { x, y };
   }
 
-  let all = true;
+  let ret = all;
   for (const [dy, row] of glyph.entries()) {
     for (const [dx, fill] of row.entries()) {
       if (fill) {
         const one = op({ x: pos.x + dx, y: pos.y + dy }, color);
-        all &&= one;
+        ret = all ? ret && one : ret || one;
       }
     }
   }
-  return all;
+  return ret;
 }
 
 function apply(
@@ -215,15 +223,18 @@ function start(level: 1) {
   state = `level${level}`;
   cls();
 
-  if (level === 1) {
-    reinitSnakes(50, 25, RIGHT, 30, 25, LEFT);
-  }
-
   // Borders
   hrule(0, 0, U_MAX);
   hrule(V_MAX, 0, U_MAX);
   vrule(0, 0, V_MAX);
   vrule(U_MAX, 0, V_MAX);
+
+  if (level === 1) {
+    reinitSnakes(50, 25, RIGHT, 30, 25, LEFT);
+  }
+
+  collectable = 1;
+  placeCollectable();
 }
 
 function dialog(msg: string) {
@@ -238,6 +249,19 @@ function add(pos: GridPosition, heading: Heading, distance: number = 1) {
   u += distance * Math.cos(heading);
   v += distance * Math.sin(heading);
   return { u, v };
+}
+
+function placeCollectable() {
+  while (true) {
+    const u = Math.floor(Math.random() * (U_MAX + 1));
+    const v = Math.floor(Math.random() * (V_MAX + 1));
+
+    if (blit({ u, v }, GLYPHS[collectable], BLUE, mature)) {
+      collectablePosition = { u, v };
+      blit({ u, v }, GLYPHS[collectable], WHITE);
+      break;
+    }
+  }
 }
 
 function turn(sammy: Snake, dpad: typeof PLAYER_1.DPAD) {
@@ -275,6 +299,27 @@ function tick() {
       if (sammy.trail.length > sammy.length) {
         const [vacated] = sammy.trail.splice(0, 1);
         erase(vacated);
+      }
+    }
+
+    let collected = false;
+    for (const sammy of snakes) {
+      if (blit(sammy.front, CELL, WHITE, mature, { all: false })) {
+        console.log("white");
+        // TODO tweak
+        sammy.length += collectable * 2;
+        sammy.score += collectable * 10;
+        collected = true;
+      }
+    }
+    if (collected) {
+      blit(collectablePosition, GLYPHS[collectable.toString()], BLUE);
+      if (collectable === 9) {
+        // TODO implement
+        dialog("Next level");
+      } else {
+        collectable++;
+        placeCollectable();
       }
     }
 
