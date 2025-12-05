@@ -63,12 +63,12 @@ interface Segment {
 
 interface Snake {
   front: GridPosition;
-  trail: GridPosition[];
+  trail: (Segment | null)[];
   length: number;
   heading: Heading;
   lives: number;
   score: number;
-  quanta: number;
+  quanta: number | null;
   name: string;
   color: Color;
 }
@@ -473,6 +473,8 @@ function placeCollectable() {
 }
 
 function turn(sammy: Snake, dpad: typeof PLAYER_1.DPAD) {
+  // TODO even stickier
+  if (sammy.quanta) return;
   // TODO feels sticky
   if (dpad.up && sammy.heading !== DOWN) {
     sammy.heading = UP;
@@ -525,17 +527,29 @@ function tick() {
     for (const sammy of snakes) {
       // FIXME this will overage if two snake fronts are too close
       age(sammy.front);
+      // FIXME quantum ticks should be scheduled globally not per snake
+      if (sammy.quanta != null) sammy.quanta--;
     }
 
     turn(snakes[0], PLAYER_1.DPAD);
     if (snakes.length > 1) turn(snakes[1], PLAYER_2.DPAD);
 
     for (const sammy of snakes) {
-      sammy.trail.push(sammy.front);
-      sammy.front = add(sammy.front, sammy.heading);
-      if (sammy.trail.length > sammy.length) {
-        const [vacated] = sammy.trail.splice(0, 1);
-        erase(vacated);
+      if (sammy.quanta) {
+        sammy.trail.push(null);
+      } else {
+        sammy.trail.push({ pos: sammy.front, heading: sammy.heading });
+        // TODO tidy
+        sammy.front = add(
+          sammy.front,
+          sammy.heading,
+          sammy.quanta == null ? VELOCITY : VELOCITY * QUANTIZATION
+        );
+        while (sammy.trail.length > sammy.length) {
+          const [vacated] = sammy.trail.splice(0, 1);
+          // XXX use heading
+          if (vacated) erase(vacated.pos);
+        }
       }
     }
 
@@ -561,11 +575,13 @@ function tick() {
     // Extend snakes after truncating trail to allow snake front to occupy
     // vacated tail.
     for (const sammy of snakes) {
+      if (sammy.quanta) continue;
       apply(sammy.front, sammy.color, trial);
     }
 
+    // FIXME should collision detect in between quanta
     const dead = snakes.filter(
-      (sammy) => !apply(sammy.front, sammy.color, safe)
+      (sammy) => !sammy.quanta && !apply(sammy.front, sammy.color, safe)
     );
     if (dead.length > 0) {
       // XXX losing lives too fast?
@@ -580,7 +596,9 @@ function tick() {
     }
 
     for (const sammy of snakes) {
+      if (sammy.quanta) continue;
       apply(sammy.front, sammy.color, graduate);
+      if (sammy.quanta === 0) sammy.quanta = QUANTIZATION;
     }
 
     header();
