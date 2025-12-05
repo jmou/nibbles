@@ -11,7 +11,7 @@ const ROWS = 24; // QBasic used 25 rows
 const PIXELS_PER_COLUMN = SCREEN_WIDTH / COLUMNS;
 const PIXELS_PER_ROW = SCREEN_HEIGHT / ROWS;
 
-type AppState = "title" | "dialog" | "level1";
+type AppState = "title" | "pre" | "level" | "post";
 
 let state: AppState = "title";
 
@@ -180,13 +180,22 @@ function center(row: number, s: string) {
   text({ u: COLUMNS / 2 - s.length, v: row * 2 }, s);
 }
 
-function title() {
+function title(msg: string = "Nibbles!") {
   cls();
-  center(0, "Nibbles!");
+  center(0, msg);
   center(11, "Press P1 or P2");
+  state = "title";
 }
 
-function spawn(name: string, color: Color) {
+function lose() {
+  title("G A M E   O V E R");
+}
+
+function win() {
+  title("You win!");
+}
+
+function addSnake(name: string, color: Color) {
   snakes.push({
     front: { u: 0, v: 0 },
     trail: [],
@@ -199,28 +208,31 @@ function spawn(name: string, color: Color) {
   });
 }
 
-function reinitSnakes(
-  u0: number,
-  v0: number,
-  heading0: Heading,
-  u1: number,
-  v1: number,
-  heading1: Heading
-) {
-  snakes[0].front = { u: u0, v: v0 };
-  snakes[0].trail = [];
-  snakes[0].heading = heading0;
-  snakes[0].length = 1;
-  if (snakes.length > 1) {
-    snakes[1].front = { u: u1, v: v1 };
-    snakes[1].trail = [];
-    snakes[1].heading = heading1;
-    snakes[1].length = 1;
-  }
+type Spawn = [number, number, Heading];
+
+interface Level {
+  spawns: [Spawn, Spawn];
+  walls: () => void;
 }
 
-function start(level: 1) {
-  state = `level${level}`;
+const LEVELS: Record<string, Level> = {
+  1: {
+    spawns: [
+      [30, 25, LEFT],
+      [50, 25, RIGHT],
+    ],
+    walls: () => {},
+  },
+  2: {
+    spawns: [
+      [20, 43, LEFT],
+      [60, 7, RIGHT],
+    ],
+    walls: () => hrule(25, 20, 60),
+  },
+};
+
+function renderLevel() {
   cls();
 
   // Borders
@@ -229,19 +241,38 @@ function start(level: 1) {
   vrule(0, 0, V_MAX);
   vrule(U_MAX, 0, V_MAX);
 
-  if (level === 1) {
-    reinitSnakes(50, 25, RIGHT, 30, 25, LEFT);
+  const { spawns, walls } = LEVELS[level];
+
+  walls();
+
+  for (const [i, snake] of snakes.entries()) {
+    const [u, v, heading] = spawns[i];
+    snake.front = { u, v };
+    snake.trail = [];
+    snake.heading = heading;
+    snake.length = 1;
+  }
+}
+
+let level = 0;
+function nextLevel() {
+  level++;
+  if (!(level in LEVELS)) {
+    win();
+    return false;
   }
 
-  collectable = 1;
-  placeCollectable();
+  renderLevel();
+
+  dialog(`Level ${level}\nPress A`);
+  state = "pre";
+  return true;
 }
 
 function dialog(msg: string) {
   for (const [i, line] of msg.split("\n").entries()) {
-    center(12 + i, line);
+    center(11 + i, line);
   }
-  state = "dialog";
 }
 
 function add(pos: GridPosition, heading: Heading, distance: number = 1) {
@@ -280,16 +311,35 @@ function turn(sammy: Snake, dpad: typeof PLAYER_1.DPAD) {
 function tick() {
   if (state === "title") {
     if (SYSTEM.ONE_PLAYER) {
-      spawn("Sammy", YELLOW);
-      start(1);
+      snakes.length = 0;
+      addSnake("Sammy", YELLOW);
+      level = 0;
+      nextLevel();
     } else if (SYSTEM.TWO_PLAYER) {
-      spawn("Sammy", YELLOW);
-      spawn("Jack", MAGENTA);
-      start(1);
+      snakes.length = 0;
+      addSnake("Sammy", YELLOW);
+      addSnake("Jack", MAGENTA);
+      level = 0;
+      nextLevel();
     }
-  } else if (state === "dialog") {
-    if (PLAYER_1.A || PLAYER_1.B || PLAYER_2.A || PLAYER_2.B) start(1);
-  } else if (state === "level1") {
+  } else if (state === "pre") {
+    if (PLAYER_1.A || PLAYER_1.B || PLAYER_2.A || PLAYER_2.B) {
+      renderLevel();
+
+      collectable = 1;
+      placeCollectable();
+
+      state = "level";
+    }
+  } else if (state === "post") {
+    if (PLAYER_1.A || PLAYER_1.B || PLAYER_2.A || PLAYER_2.B) nextLevel();
+  } else if (state.startsWith("level")) {
+    // Skip level debug cheat.
+    if (PLAYER_1.A && PLAYER_1.B && PLAYER_2.A && PLAYER_2.B) {
+      nextLevel();
+      return;
+    }
+
     turn(snakes[0], PLAYER_1.DPAD);
     if (snakes.length > 1) turn(snakes[1], PLAYER_2.DPAD);
 
@@ -315,8 +365,7 @@ function tick() {
     if (collected) {
       blit(collectablePosition, GLYPHS[collectable.toString()], BLUE);
       if (collectable === 9) {
-        // TODO implement
-        dialog("Next level");
+        if (!nextLevel()) return;
       } else {
         collectable++;
         placeCollectable();
@@ -335,9 +384,10 @@ function tick() {
     if (dead.length > 0) {
       for (const snake of dead) snake.lives--;
       if (dead.some(({ lives }) => lives === 0)) {
-        dialog("G A M E   O V E R");
+        lose();
       } else {
         dialog(dead.map(({ name }) => `${name} Dies!`).join("\n"));
+        state = "post";
       }
       // FIXME resolve trial colors
     }
@@ -350,6 +400,7 @@ function tick() {
   ctx.putImageData(bitmap, 0, 0);
 }
 
+cls();
 title();
 
 const speed = 50;
