@@ -18,7 +18,7 @@ const PIXELS_PER_ROW = SCREEN_HEIGHT / ROWS;
 const QUANTIZATION = 3;
 const VELOCITY = 1 / QUANTIZATION;
 
-type AppState = "title" | "pre" | "level" | "post" | "retry";
+type AppState = "title" | "pre" | "level" | "post";
 
 let state: AppState = "title";
 
@@ -554,11 +554,6 @@ function tick() {
     }
   } else if (state === "post") {
     if (PLAYER_1.A || PLAYER_1.B || PLAYER_2.A || PLAYER_2.B) nextLevel();
-  } else if (state === "retry") {
-    if (PLAYER_1.A || PLAYER_1.B || PLAYER_2.A || PLAYER_2.B) {
-      renderLevel();
-      state = "level";
-    }
   } else if (state === "level") {
     // Skip level debug cheat.
     if (PLAYER_1.A && PLAYER_1.B && PLAYER_2.A && PLAYER_2.B) {
@@ -632,7 +627,7 @@ function tick() {
         lose();
       } else {
         dialog(dead.map(({ name }) => `${name} Dies!`).join("\n"));
-        state = "retry";
+        state = "pre";
       }
       // FIXME resolve trial colors
     }
