@@ -18,7 +18,7 @@ const PIXELS_PER_ROW = SCREEN_HEIGHT / ROWS;
 const QUANTIZATION = 3;
 const VELOCITY = 1 / QUANTIZATION;
 
-type AppState = "title" | "pre" | "level" | "post";
+type AppState = "title" | "prepre" | "pre" | "level" | "post";
 
 let state: AppState = "title";
 
@@ -545,6 +545,9 @@ function tick() {
       level = 0;
       nextLevel();
     }
+  } else if (state === "prepre") {
+    // Hack to debounce.
+    if (!(PLAYER_1.A || PLAYER_1.B || PLAYER_2.A || PLAYER_2.B)) state = "pre";
   } else if (state === "pre") {
     if (PLAYER_1.A || PLAYER_1.B || PLAYER_2.A || PLAYER_2.B) {
       renderLevel();
@@ -560,6 +563,7 @@ function tick() {
     // Skip level debug cheat.
     if (PLAYER_1.A && PLAYER_1.B && PLAYER_2.A && PLAYER_2.B) {
       nextLevel();
+      state = "prepre";
       return;
     }
 
