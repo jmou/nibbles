@@ -494,7 +494,7 @@ function renderLevel() {
   walls();
 
   for (const [i, snake] of snakes.entries()) {
-    const [row, col, heading] = spawns[i];
+    const [col, row, heading] = spawns[i];
     snake.front = { u: col - 1, v: row - 1 };
     snake.trail = [];
     snake.heading = heading;
