@@ -16,6 +16,52 @@ html, body, #app {
   justify-content: center;
 }
 
+.dip1 {
+  filter: grayscale(1);
+}
+
+.dip2 > * {
+  filter: url(#bloom) url(#bubble);
+}
+.dip2 #overlay {
+  position: absolute;
+  width: 320px;
+  height: 240px;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+    linear-gradient(
+      90deg,
+      rgba(255, 0, 0, 0.06),
+      rgba(0, 255, 0, 0.02),
+      rgba(0, 0, 255, 0.06)
+    );
+  background-size: 100% 4px, 30px 100%;
+  animation: flicker 100ms infinite;
+  z-index: 1;
+}
+.dip2 #overlay:after {
+  content: "";
+  position: absolute;
+  width: 320px;
+  height: 240px;
+  background: rgb(255, 255, 255);
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0) 70%,
+    rgba(0, 0, 0, 1) 100%
+  );
+  z-index: 2;
+}
+
+@keyframes flicker {
+  0% {
+    transform: translateY(1px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+
 /* #app {
   transform: translate(calc(336px / 2), calc(262px / 2)) scale(2);
   * {
