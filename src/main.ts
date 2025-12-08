@@ -570,12 +570,16 @@ function tick() {
     if (!(PLAYER_1.A || PLAYER_1.B || PLAYER_2.A || PLAYER_2.B)) state = "pre";
   } else if (state === "pre") {
     if (PLAYER_1.A || PLAYER_1.B || PLAYER_2.A || PLAYER_2.B) {
-      renderLevel();
+      if (snakes.some(({ lives }) => lives === 0)) {
+        lose();
+      } else {
+        renderLevel();
 
-      pickup = 1;
-      dropPickup();
+        pickup = 1;
+        dropPickup();
 
-      state = "level";
+        state = "level";
+      }
     }
   } else if (state === "post") {
     if (PLAYER_1.A || PLAYER_1.B || PLAYER_2.A || PLAYER_2.B) nextLevel();
@@ -653,12 +657,8 @@ function tick() {
     );
     if (dead.length > 0) {
       for (const snake of dead) snake.lives--;
-      if (dead.some(({ lives }) => lives === 0)) {
-        lose();
-      } else {
-        dialog(dead.map(({ name }) => `${name} Dies!`).join("\n"));
-        state = "pre";
-      }
+      dialog(dead.map(({ name }) => `${name} Dies!`).join("\n"));
+      state = "pre";
       // FIXME resolve trial colors
     }
 
