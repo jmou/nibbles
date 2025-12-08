@@ -18,7 +18,7 @@ const PIXELS_PER_ROW = SCREEN_HEIGHT / ROWS;
 const QUANTIZATION = 3;
 const VELOCITY = 1 / QUANTIZATION;
 
-type AppState = "title" | "prepre" | "pre" | "level" | "post";
+type AppState = "title" | "pre" | "level" | "post";
 
 interface ScreenPosition {
   x: number;
@@ -56,6 +56,12 @@ const YOUNG = MATURE - 3 * QUANTIZATION;
 let pickup = 1;
 let pickupPosition = { u: 0, v: 0 };
 
+interface PlayerInput {
+  dpad: ("UP" | "DOWN" | "LEFT" | "RIGHT")[];
+  a: boolean;
+  b: boolean;
+}
+
 interface Snake {
   front: GridPosition;
   trail: (GridPosition | null)[];
@@ -66,6 +72,7 @@ interface Snake {
   quantized: boolean;
   name: string;
   color: Color;
+  input: PlayerInput;
   // TODO hack
   lastSpinner: number | null;
 }
@@ -330,6 +337,7 @@ function addSnake(name: string, color: Color) {
     quantized: true,
     name,
     color,
+    input: { dpad: [], a: false, b: false },
     lastSpinner: null,
   });
 }
@@ -530,11 +538,7 @@ function dropPickup() {
   }
 }
 
-function turn(
-  sammy: Snake,
-  dpad: typeof PLAYER_1.DPAD,
-  spinner: typeof SPINNER_1.SPINNER
-) {
+function turn(sammy: Snake, spinner: typeof SPINNER_1.SPINNER) {
   if (sammy.lastSpinner == null) {
     sammy.lastSpinner = spinner.angle;
   } else if (spinner.angle != sammy.lastSpinner) {
@@ -543,22 +547,28 @@ function turn(
     sammy.quantized = false;
   }
 
-  // TODO even stickier
   if (clock % QUANTIZATION !== 0) return;
-  // TODO feels sticky
-  if (dpad.up && sammy.heading !== DOWN) {
+  const dpad = sammy.input.dpad.shift();
+  if (dpad === "UP" && sammy.heading !== DOWN) {
     sammy.heading = UP;
     sammy.quantized = true;
-  } else if (dpad.down && sammy.heading !== UP) {
+  } else if (dpad === "DOWN" && sammy.heading !== UP) {
     sammy.heading = DOWN;
     sammy.quantized = true;
-  } else if (dpad.left && sammy.heading !== RIGHT) {
+  } else if (dpad === "LEFT" && sammy.heading !== RIGHT) {
     sammy.heading = LEFT;
     sammy.quantized = true;
-  } else if (dpad.right && sammy.heading !== LEFT) {
+  } else if (dpad === "RIGHT" && sammy.heading !== LEFT) {
     sammy.heading = RIGHT;
     sammy.quantized = true;
   }
+}
+
+function anyButton() {
+  for (const snake of snakes) {
+    if (snake.input.a || snake.input.b) return true;
+  }
+  return false;
 }
 
 function tick() {
@@ -581,11 +591,8 @@ function tick() {
       if (speed < 100) speed++;
       redrawTitleSettings();
     }
-  } else if (state === "prepre") {
-    // Hack to debounce.
-    if (!(PLAYER_1.A || PLAYER_1.B || PLAYER_2.A || PLAYER_2.B)) state = "pre";
   } else if (state === "pre") {
-    if (PLAYER_1.A || PLAYER_1.B || PLAYER_2.A || PLAYER_2.B) {
+    if (anyButton()) {
       if (snakes.some(({ lives }) => lives === 0)) {
         lose();
       } else {
@@ -598,11 +605,15 @@ function tick() {
       }
     }
   } else if (state === "post") {
-    if (PLAYER_1.A || PLAYER_1.B || PLAYER_2.A || PLAYER_2.B) nextLevel();
+    if (anyButton()) nextLevel();
   } else if (state === "level") {
     // Skip level debug cheat.
     if (PLAYER_1.A && PLAYER_1.B && PLAYER_2.A && PLAYER_2.B) {
-      if (nextLevel()) state = "prepre";
+      if (nextLevel()) state = "pre";
+      for (const sammy of snakes) {
+        sammy.input.a = false;
+        sammy.input.b = false;
+      }
       return;
     }
 
@@ -614,8 +625,8 @@ function tick() {
       age(sammy.front);
     }
 
-    turn(snakes[0], PLAYER_1.DPAD, SPINNER_1.SPINNER);
-    if (snakes.length > 1) turn(snakes[1], PLAYER_2.DPAD, SPINNER_2.SPINNER);
+    turn(snakes[0], SPINNER_1.SPINNER);
+    if (snakes.length > 1) turn(snakes[1], SPINNER_2.SPINNER);
 
     for (const sammy of snakes) {
       if (sammy.quantized && !quantumTick) {
@@ -681,6 +692,8 @@ function tick() {
     for (const sammy of snakes) {
       if (sammy.quantized && !quantumTick) continue;
       apply(sammy.front, sammy.color, graduate);
+      sammy.input.a = false;
+      sammy.input.b = false;
     }
 
     header();
@@ -697,5 +710,21 @@ on("press", (event) => {
   if (type === "system" && state !== "title") {
     if (button === "ONE_PLAYER") app.classList.toggle("dip1");
     if (button === "TWO_PLAYER") app.classList.toggle("dip2");
+  } else if (type === "button") {
+    const input = snakes[(event.player ?? 0) - 1]?.input;
+    if (!input) return;
+    if (button === "A") {
+      input.a = true;
+    } else if (button === "B") {
+      input.b = true;
+    } else if (
+      button === "UP" ||
+      button === "DOWN" ||
+      button === "LEFT" ||
+      button === "RIGHT"
+    ) {
+      console.log(button);
+      input.dpad.push(button);
+    }
   }
 });
