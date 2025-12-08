@@ -274,6 +274,7 @@ function title(msg: string = "Nibbles!") {
   cls();
   center(0, msg);
   center(11, "Press P1 or P2");
+  level = 0;
   state = "title";
 }
 
@@ -536,13 +537,11 @@ function tick() {
     if (SYSTEM.ONE_PLAYER) {
       snakes.length = 0;
       addSnake("Sammy", YELLOW);
-      level = 0;
       nextLevel();
     } else if (SYSTEM.TWO_PLAYER) {
       snakes.length = 0;
       addSnake("Sammy", YELLOW);
       addSnake("Jake", MAGENTA);
-      level = 0;
       nextLevel();
     }
   } else if (state === "prepre") {
@@ -562,8 +561,7 @@ function tick() {
   } else if (state === "level") {
     // Skip level debug cheat.
     if (PLAYER_1.A && PLAYER_1.B && PLAYER_2.A && PLAYER_2.B) {
-      nextLevel();
-      state = "prepre";
+      if (nextLevel()) state = "prepre";
       return;
     }
 
