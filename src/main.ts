@@ -542,7 +542,11 @@ function dropPickup() {
   }
 }
 
-function turn(sammy: Snake, spinner: typeof SPINNER_1.SPINNER) {
+function turn(
+  sammy: Snake,
+  dpad: typeof PLAYER_1.DPAD,
+  spinner: typeof SPINNER_1.SPINNER
+) {
   if (sammy.lastSpinner == null) {
     sammy.lastSpinner = spinner.angle;
   } else if (spinner.angle != sammy.lastSpinner) {
@@ -552,17 +556,26 @@ function turn(sammy: Snake, spinner: typeof SPINNER_1.SPINNER) {
   }
 
   if (clock % QUANTIZATION !== 0) return;
-  const dpad = sammy.input.dpad.shift();
-  if (dpad === "UP" && sammy.heading !== DOWN) {
+  let direction = sammy.input.dpad.shift();
+
+  // Intentional bunny hopping.
+  if (!direction && !sammy.quantized) {
+    if (dpad.up) direction = "UP";
+    else if (dpad.down) direction = "DOWN";
+    else if (dpad.left) direction = "LEFT";
+    else if (dpad.right) direction = "RIGHT";
+  }
+
+  if (direction === "UP" && sammy.heading !== DOWN) {
     sammy.heading = UP;
     sammy.quantized = true;
-  } else if (dpad === "DOWN" && sammy.heading !== UP) {
+  } else if (direction === "DOWN" && sammy.heading !== UP) {
     sammy.heading = DOWN;
     sammy.quantized = true;
-  } else if (dpad === "LEFT" && sammy.heading !== RIGHT) {
+  } else if (direction === "LEFT" && sammy.heading !== RIGHT) {
     sammy.heading = LEFT;
     sammy.quantized = true;
-  } else if (dpad === "RIGHT" && sammy.heading !== LEFT) {
+  } else if (direction === "RIGHT" && sammy.heading !== LEFT) {
     sammy.heading = RIGHT;
     sammy.quantized = true;
   }
@@ -635,8 +648,8 @@ function tick() {
       age(sammy.front);
     }
 
-    turn(snakes[0], SPINNER_1.SPINNER);
-    if (snakes.length > 1) turn(snakes[1], SPINNER_2.SPINNER);
+    turn(snakes[0], PLAYER_1.DPAD, SPINNER_1.SPINNER);
+    if (snakes.length > 1) turn(snakes[1], PLAYER_1.DPAD, SPINNER_2.SPINNER);
 
     for (const sammy of snakes) {
       if (sammy.quantized && !quantumTick) {
@@ -694,7 +707,7 @@ function tick() {
     );
     if (dead.length > 0) {
       for (const snake of dead) snake.lives--;
-      dialog(dead.map(({ name }) => `${name} Dies!`).join("\n"));
+      dialog(dead.map(({ name }) => `${name} Dies!\nPress A`).join("\n"));
       state = "pre";
       // FIXME resolve trial colors
     }
