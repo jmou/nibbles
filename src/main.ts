@@ -261,14 +261,35 @@ function header() {
   }
 }
 
+let speed = 50;
 let level = 0;
 let clock = 0;
 let state: AppState = "title";
 
+let tickHandle: number;
+function resetTickInterval() {
+  const speedScale = 1 - (speed - 50) / 100;
+  const renderInterval = (speedScale * 1000) / 30;
+  clearInterval(tickHandle);
+  tickHandle = setInterval(tick, renderInterval);
+}
+
+function redrawTitleSettings() {
+  center(13, `  Speed: ${speed}  `);
+  center(14, speed === 100 ? "Twiddle Fingers" : "               ");
+}
+
 function title(msg: string = "Nibbles!") {
   cls();
   center(0, msg);
-  center(11, "Press P1 or P2");
+  center(9, "Press P1 or P2");
+  redrawTitleSettings();
+
+  const oldSpeed = speed;
+  speed = 50;
+  resetTickInterval();
+  speed = oldSpeed;
+
   level = 0;
   clock = 0;
   state = "title";
@@ -529,12 +550,20 @@ function tick() {
     if (SYSTEM.ONE_PLAYER) {
       snakes.length = 0;
       addSnake("Sammy", YELLOW);
+      resetTickInterval();
       nextLevel();
     } else if (SYSTEM.TWO_PLAYER) {
       snakes.length = 0;
       addSnake("Sammy", YELLOW);
       addSnake("Jake", MAGENTA);
+      resetTickInterval();
       nextLevel();
+    } else if (PLAYER_1.DPAD.left || PLAYER_2.DPAD.left) {
+      if (speed > 1) speed--;
+      redrawTitleSettings();
+    } else if (PLAYER_1.DPAD.right || PLAYER_2.DPAD.right) {
+      if (speed < 100) speed++;
+      redrawTitleSettings();
     }
   } else if (state === "prepre") {
     // Hack to debounce.
@@ -646,8 +675,3 @@ function tick() {
 
 cls();
 title();
-
-const speed = 50;
-const speedScale = 1 - (speed - 50) / 100;
-const renderInterval = (speedScale * 1000) / 30;
-setInterval(tick, renderInterval);
