@@ -579,6 +579,11 @@ function tick() {
           sammy.heading,
           sammy.quantized ? VELOCITY * QUANTIZATION : VELOCITY
         );
+        if (sammy.quantized) {
+          // TODO can cause discontinuities
+          sammy.front.u = Math.round(sammy.front.u);
+          sammy.front.v = Math.round(sammy.front.v);
+        }
         while (sammy.trail.length > sammy.length) {
           const [vacated] = sammy.trail.splice(0, 1);
           if (vacated) erase(vacated);
