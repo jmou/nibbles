@@ -357,7 +357,7 @@ const LEVELS: Record<string, Level> = {
   1: {
     spawns: [
       [30, 25, LEFT],
-      [50, 25, RIGHT],
+      [51, 25, RIGHT],
     ],
     walls: () => {},
   },
