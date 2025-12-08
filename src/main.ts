@@ -20,8 +20,6 @@ const VELOCITY = 1 / QUANTIZATION;
 
 type AppState = "title" | "prepre" | "pre" | "level" | "post";
 
-let state: AppState = "title";
-
 interface ScreenPosition {
   x: number;
   y: number;
@@ -53,7 +51,7 @@ const SALMON = { r: 255, g: 85, b: 85 };
 type Alpha = number;
 const TRIAL = 0;
 const MATURE = 255;
-const YOUNG = MATURE - 2 * QUANTIZATION;
+const YOUNG = MATURE - 3 * QUANTIZATION;
 
 let pickup = 1;
 let pickupPosition = { u: 0, v: 0 };
@@ -65,7 +63,7 @@ interface Snake {
   heading: Heading;
   lives: number;
   score: number;
-  quanta: number | null;
+  quantized: boolean;
   name: string;
   color: Color;
   // TODO hack
@@ -263,11 +261,16 @@ function header() {
   }
 }
 
+let level = 0;
+let clock = 0;
+let state: AppState = "title";
+
 function title(msg: string = "Nibbles!") {
   cls();
   center(0, msg);
   center(11, "Press P1 or P2");
   level = 0;
+  clock = 0;
   state = "title";
 }
 
@@ -287,7 +290,7 @@ function addSnake(name: string, color: Color) {
     heading: RIGHT,
     lives: 5,
     score: 0,
-    quanta: QUANTIZATION,
+    quantized: true,
     name,
     color,
     lastSpinner: null,
@@ -450,7 +453,6 @@ function renderLevel() {
   }
 }
 
-let level = 0;
 function nextLevel() {
   level++;
   if (!(level in LEVELS)) {
@@ -501,25 +503,24 @@ function turn(
   } else if (spinner.angle != sammy.lastSpinner) {
     sammy.heading += spinner.angle - sammy.lastSpinner;
     sammy.lastSpinner = spinner.angle;
-    sammy.quanta = null;
+    sammy.quantized = false;
   }
 
   // TODO even stickier
-  if (sammy.quanta) return;
+  if (clock % QUANTIZATION !== 0) return;
   // TODO feels sticky
   if (dpad.up && sammy.heading !== DOWN) {
     sammy.heading = UP;
-    // TODO clean up
-    sammy.quanta = 0;
+    sammy.quantized = true;
   } else if (dpad.down && sammy.heading !== UP) {
     sammy.heading = DOWN;
-    sammy.quanta = 0;
+    sammy.quantized = true;
   } else if (dpad.left && sammy.heading !== RIGHT) {
     sammy.heading = LEFT;
-    sammy.quanta = 0;
+    sammy.quantized = true;
   } else if (dpad.right && sammy.heading !== LEFT) {
     sammy.heading = RIGHT;
-    sammy.quanta = 0;
+    sammy.quantized = true;
   }
 }
 
@@ -556,18 +557,19 @@ function tick() {
       return;
     }
 
+    clock++;
+    const quantumTick = clock % QUANTIZATION === 0;
+
     for (const sammy of snakes) {
       // FIXME this will overage if two snake fronts are too close
       age(sammy.front);
-      // FIXME quantum ticks should be scheduled globally not per snake
-      if (sammy.quanta != null) sammy.quanta--;
     }
 
     turn(snakes[0], PLAYER_1.DPAD, SPINNER_1.SPINNER);
     if (snakes.length > 1) turn(snakes[1], PLAYER_2.DPAD, SPINNER_2.SPINNER);
 
     for (const sammy of snakes) {
-      if (sammy.quanta) {
+      if (sammy.quantized && !quantumTick) {
         sammy.trail.push(null);
       } else {
         sammy.trail.push(sammy.front);
@@ -575,7 +577,7 @@ function tick() {
         sammy.front = add(
           sammy.front,
           sammy.heading,
-          sammy.quanta == null ? VELOCITY : VELOCITY * QUANTIZATION
+          sammy.quantized ? VELOCITY * QUANTIZATION : VELOCITY
         );
         while (sammy.trail.length > sammy.length) {
           const [vacated] = sammy.trail.splice(0, 1);
@@ -605,13 +607,15 @@ function tick() {
     // Extend snakes after truncating trail to allow snake front to occupy
     // vacated tail.
     for (const sammy of snakes) {
-      if (sammy.quanta) continue;
+      if (sammy.quantized && !quantumTick) continue;
       apply(sammy.front, sammy.color, trial);
     }
 
     // FIXME should collision detect in between quanta
     const dead = snakes.filter(
-      (sammy) => !sammy.quanta && !apply(sammy.front, sammy.color, safe)
+      (sammy) =>
+        (!sammy.quantized || quantumTick) &&
+        !apply(sammy.front, sammy.color, safe)
     );
     if (dead.length > 0) {
       for (const snake of dead) snake.lives--;
@@ -625,9 +629,8 @@ function tick() {
     }
 
     for (const sammy of snakes) {
-      if (sammy.quanta) continue;
+      if (sammy.quantized && !quantumTick) continue;
       apply(sammy.front, sammy.color, graduate);
-      if (sammy.quanta === 0) sammy.quanta = QUANTIZATION;
     }
 
     header();
