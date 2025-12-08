@@ -4,7 +4,7 @@ import {
   PLAYER_2 as SPINNER_2,
 } from "@rcade/plugin-input-spinners";
 import "./style.css";
-import { CELL, GLYPHS } from "./glyphs";
+import { CELL, GLYPH_BLOCK, GLYPHS } from "./glyphs";
 
 const SCREEN_WIDTH = 320;
 const SCREEN_HEIGHT = 240;
@@ -238,7 +238,9 @@ function vrule(u: number, v1: number, v2: number) {
 
 function text(pos: GridPosition, s: string) {
   for (const [i, ch] of [...s].entries()) {
-    blit({ u: pos.u + i * 2, v: pos.v }, GLYPHS[ch], WHITE);
+    const blitPos = { u: pos.u + i * 2, v: pos.v };
+    blit(blitPos, GLYPH_BLOCK, BLUE);
+    blit(blitPos, GLYPHS[ch], WHITE);
   }
 }
 

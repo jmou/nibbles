@@ -18,6 +18,19 @@ export const CELL = bitmap`
 ####
 `;
 
+export const GLYPH_BLOCK = bitmap`
+########
+########
+########
+########
+########
+########
+########
+########
+########
+########
+`;
+
 export const GLYPHS: Record<string, boolean[][]> = {
   " ": [],
   A: bitmap`
