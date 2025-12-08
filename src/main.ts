@@ -49,7 +49,6 @@ const WHITE = { r: 255, g: 255, b: 255 };
 const YELLOW = { r: 255, g: 255, b: 0 };
 const MAGENTA = { r: 255, g: 0, b: 255 };
 const SALMON = { r: 255, g: 85, b: 85 };
-const BLACK = { r: 0, g: 0, b: 0 }; // invalid color
 
 type Alpha = number;
 const TRIAL = 0;
@@ -59,15 +58,9 @@ const YOUNG = MATURE - 2 * QUANTIZATION;
 let collectable = 1;
 let collectablePosition = { u: 0, v: 0 };
 
-// XXX trail
-interface Segment {
-  pos: GridPosition;
-  heading: number | null;
-}
-
 interface Snake {
   front: GridPosition;
-  trail: (Segment | null)[];
+  trail: (GridPosition | null)[];
   length: number;
   heading: Heading;
   lives: number;
@@ -196,28 +189,12 @@ function blit(
   return ret;
 }
 
-function line(pos: GridPosition, normal: Heading, color: Color, op: PixelOp) {
-  const x = Math.round(pos.u * CELL_WIDTH);
-  const y = Math.round(pos.v * CELL_HEIGHT);
-  // pos = { x, y };
-  return op({ x, y }, color);
-}
-
 function apply(
-  // TODO clean up
-  pos: ScreenPosition | GridPosition | Snake,
+  pos: ScreenPosition | GridPosition,
   color: Color,
   op: PixelOp = paint
 ) {
-  let continuous: Snake | null = null;
-  if ("quanta" in pos) {
-    if (pos.quanta == null) continuous = pos;
-    pos = pos.front;
-  }
-
-  if (continuous) {
-    return line(continuous.front, continuous.heading, color, op);
-  } else if ("x" in pos) {
+  if ("x" in pos) {
     return op(pos, color);
   } else {
     return blit(pos, CELL, color, op);
@@ -504,10 +481,8 @@ function turn(
   spinner: typeof SPINNER_1.SPINNER
 ) {
   if (sammy.lastSpinner == null) {
-    console.log(spinner);
     sammy.lastSpinner = spinner.angle;
   } else if (spinner.angle != sammy.lastSpinner) {
-    console.log(spinner);
     sammy.heading += spinner.angle - sammy.lastSpinner;
     sammy.lastSpinner = spinner.angle;
     sammy.quanta = null;
@@ -579,7 +554,7 @@ function tick() {
       if (sammy.quanta) {
         sammy.trail.push(null);
       } else {
-        sammy.trail.push({ pos: sammy.front, heading: sammy.heading });
+        sammy.trail.push(sammy.front);
         // TODO tidy
         sammy.front = add(
           sammy.front,
@@ -588,8 +563,7 @@ function tick() {
         );
         while (sammy.trail.length > sammy.length) {
           const [vacated] = sammy.trail.splice(0, 1);
-          // XXX use heading
-          if (vacated) erase(vacated.pos);
+          if (vacated) erase(vacated);
         }
       }
     }
@@ -625,7 +599,6 @@ function tick() {
       (sammy) => !sammy.quanta && !apply(sammy.front, sammy.color, safe)
     );
     if (dead.length > 0) {
-      // XXX losing lives too fast?
       for (const snake of dead) snake.lives--;
       if (dead.some(({ lives }) => lives === 0)) {
         lose();
