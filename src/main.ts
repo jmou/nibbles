@@ -55,8 +55,8 @@ const TRIAL = 0;
 const MATURE = 255;
 const YOUNG = MATURE - 2 * QUANTIZATION;
 
-let collectable = 1;
-let collectablePosition = { u: 0, v: 0 };
+let pickup = 1;
+let pickupPosition = { u: 0, v: 0 };
 
 interface Snake {
   front: GridPosition;
@@ -462,14 +462,14 @@ function add(pos: GridPosition, heading: Heading, distance: number = VELOCITY) {
   return { u, v };
 }
 
-function placeCollectable() {
+function dropPickup() {
   while (true) {
     const u = Math.floor(Math.random() * (U_MAX + 1));
     const v = Math.floor(Math.random() * (V_MAX + 1));
 
-    if (blit({ u, v }, GLYPHS[collectable], BLUE, mature)) {
-      collectablePosition = { u, v };
-      blit({ u, v }, GLYPHS[collectable], WHITE);
+    if (blit({ u, v }, GLYPHS[pickup], BLUE, mature)) {
+      pickupPosition = { u, v };
+      blit({ u, v }, GLYPHS[pickup], WHITE);
       break;
     }
   }
@@ -526,8 +526,8 @@ function tick() {
     if (PLAYER_1.A || PLAYER_1.B || PLAYER_2.A || PLAYER_2.B) {
       renderLevel();
 
-      collectable = 1;
-      placeCollectable();
+      pickup = 1;
+      dropPickup();
 
       state = "level";
     }
@@ -572,18 +572,18 @@ function tick() {
     for (const sammy of snakes) {
       if (blit(sammy.front, CELL, WHITE, mature, { all: false })) {
         // TODO tweak
-        sammy.length += collectable * 4 * QUANTIZATION;
-        sammy.score += collectable * 10;
+        sammy.length += pickup * 4 * QUANTIZATION;
+        sammy.score += pickup * 10;
         collected = true;
       }
     }
     if (collected) {
-      blit(collectablePosition, GLYPHS[collectable.toString()], BLUE);
-      if (collectable === 9) {
+      blit(pickupPosition, GLYPHS[pickup.toString()], BLUE);
+      if (pickup === 9) {
         if (!nextLevel()) return;
       } else {
-        collectable++;
-        placeCollectable();
+        pickup++;
+        dropPickup();
       }
     }
 
