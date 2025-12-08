@@ -607,6 +607,12 @@ function tick() {
 
         state = "level";
       }
+      for (const sammy of snakes) {
+        sammy.input.dpad.length = 0;
+        sammy.input.a = false;
+        sammy.input.b = false;
+        sammy.lastSpinner = null;
+      }
     }
   } else if (state === "post") {
     if (anyButton()) nextLevel();
@@ -709,7 +715,22 @@ function tick() {
 cls();
 title();
 
-on("press", (event) => {
+const debounce = new Set<string>();
+
+function serializeInput(event: {
+  type: string;
+  button: string;
+  player?: 1 | 2;
+}) {
+  return `${event.type}-${event.button}-${event.player ?? "x"}`;
+}
+
+on("inputStart", (event) => {
+  const key = serializeInput(event);
+  if (debounce.has(key)) return;
+  debounce.add(key);
+  console.log(key);
+
   const { type, button } = event;
   if (type === "system" && state !== "title") {
     if (button === "ONE_PLAYER") app.classList.toggle("dip1");
@@ -731,4 +752,10 @@ on("press", (event) => {
       input.dpad.push(button);
     }
   }
+});
+
+on("inputEnd", (event) => {
+  const key = serializeInput(event);
+  debounce.delete(key);
+  console.log(key);
 });
