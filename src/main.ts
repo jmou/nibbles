@@ -226,12 +226,16 @@ function erase(pos: GridPosition) {
   blit(pos, CELL, BLUE);
 }
 
-function hrule(v: number, u1: number, u2: number) {
-  for (let u = u1; u <= u2; u++) apply({ u, v }, SALMON);
+function wall(row: number, col: number) {
+  apply({ u: col - 1, v: row - 1 }, SALMON);
 }
 
-function vrule(u: number, v1: number, v2: number) {
-  for (let v = v1; v <= v2; v++) apply({ u, v }, SALMON);
+function hrule(row: number, col1: number, col2: number) {
+  for (let col = col1; col <= col2; col++) wall(row, col);
+}
+
+function vrule(col: number, row1: number, row2: number) {
+  for (let row = row1; row <= row2; row++) wall(row, col);
 }
 
 function text(pos: GridPosition, s: string) {
@@ -404,15 +408,15 @@ const LEVELS: Record<string, Level> = {
       [65, 7, DOWN],
     ],
     walls: () => {
-      for (let v = 4; v <= 49; v++) {
-        if (v > 30 || v < 23) {
-          apply({ u: 10, v }, SALMON);
-          apply({ u: 20, v }, SALMON);
-          apply({ u: 30, v }, SALMON);
-          apply({ u: 40, v }, SALMON);
-          apply({ u: 50, v }, SALMON);
-          apply({ u: 60, v }, SALMON);
-          apply({ u: 70, v }, SALMON);
+      for (let i = 4; i <= 49; i++) {
+        if (i > 30 || i < 23) {
+          wall(i, 10);
+          wall(i, 20);
+          wall(i, 30);
+          wall(i, 40);
+          wall(i, 50);
+          wall(i, 60);
+          wall(i, 70);
         }
       }
     },
@@ -423,8 +427,8 @@ const LEVELS: Record<string, Level> = {
       [65, 7, DOWN],
     ],
     walls: () => {
-      for (let v = 4; v <= 49; v += 2) {
-        apply({ u: 40, v }, SALMON);
+      for (let i = 4; i <= 49; i += 2) {
+        wall(i, 40);
       }
     },
   },
@@ -434,14 +438,14 @@ const LEVELS: Record<string, Level> = {
       [65, 7, DOWN],
     ],
     walls: () => {
-      for (let v = 4; v <= 40; v++) {
-        apply({ u: 10, v }, SALMON);
-        apply({ u: 20, v: 53 - v }, SALMON);
-        apply({ u: 30, v }, SALMON);
-        apply({ u: 40, v: 53 - v }, SALMON);
-        apply({ u: 50, v }, SALMON);
-        apply({ u: 60, v: 53 - v }, SALMON);
-        apply({ u: 70, v }, SALMON);
+      for (let i = 4; i <= 40; i++) {
+        wall(i, 10);
+        wall(53 - i, 20);
+        wall(i, 30);
+        wall(53 - i, 40);
+        wall(i, 50);
+        wall(53 - i, 60);
+        wall(i, 70);
       }
     },
   },
@@ -451,9 +455,9 @@ const LEVELS: Record<string, Level> = {
       [75, 40, UP],
     ],
     walls: () => {
-      for (let v = 6; v <= 47; v++) {
-        apply({ u: v, v }, SALMON);
-        apply({ u: v + 28, v }, SALMON);
+      for (let i = 6; i <= 45; i++) {
+        wall(i, i);
+        wall(i, i + 30);
       }
     },
   },
@@ -463,14 +467,14 @@ const LEVELS: Record<string, Level> = {
       [65, 7, DOWN],
     ],
     walls: () => {
-      for (let v = 4; v <= 49; v += 2) {
-        apply({ u: 10, v }, SALMON);
-        apply({ u: 20, v: v + 1 }, SALMON);
-        apply({ u: 30, v }, SALMON);
-        apply({ u: 40, v: v + 1 }, SALMON);
-        apply({ u: 50, v }, SALMON);
-        apply({ u: 60, v: v + 1 }, SALMON);
-        apply({ u: 70, v }, SALMON);
+      for (let i = 4; i <= 49; i += 2) {
+        wall(i, 10);
+        wall(i + 1, 20);
+        wall(i, 30);
+        wall(i + 1, 40);
+        wall(i, 50);
+        wall(i + 1, 60);
+        wall(i, 70);
       }
     },
   },
@@ -480,18 +484,18 @@ function renderLevel() {
   cls();
 
   // Borders
-  hrule(2, 0, U_MAX);
-  hrule(V_MAX, 0, U_MAX);
-  vrule(0, 2, V_MAX);
-  vrule(U_MAX, 2, V_MAX);
+  hrule(3, 1, COLUMNS);
+  hrule(ROWS * 2, 1, COLUMNS);
+  vrule(1, 3, ROWS * 2);
+  vrule(COLUMNS, 3, ROWS * 2);
 
   const { spawns, walls } = LEVELS[level];
 
   walls();
 
   for (const [i, snake] of snakes.entries()) {
-    const [u, v, heading] = spawns[i];
-    snake.front = { u, v };
+    const [row, col, heading] = spawns[i];
+    snake.front = { u: col - 1, v: row - 1 };
     snake.trail = [];
     snake.heading = heading;
     snake.length = QUANTIZATION;
