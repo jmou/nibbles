@@ -225,6 +225,26 @@ function center(row: number, s: string) {
   text({ u: COLUMNS / 2 - s.length, v: row * 2 }, s);
 }
 
+function halfHeader(sammy: Snake, left: boolean) {
+  let score = String(sammy.score);
+  if (left) {
+    score = score.padEnd(6);
+  } else {
+    score = score.padStart(6);
+  }
+  const arrow = left ? " <-" : "-> ";
+  const name = sammy.name.toUpperCase();
+  let lives = "@".repeat(sammy.lives);
+  if (left) {
+    lives = lives.padStart(5);
+  } else {
+    lives = lives.padEnd(5);
+  }
+  const pieces = [score, lives, arrow, name];
+  if (!left) pieces.reverse();
+  return pieces.join("");
+}
+
 function header() {
   for (let u = 0; u <= U_MAX; u++) {
     erase({ u, v: 0 });
@@ -233,15 +253,11 @@ function header() {
 
   if (snakes.length === 0) return;
 
-  const p1 = snakes[0];
-  const p2 = snakes.length > 1 ? snakes[1] : null;
-
-  // TODO pad
-  const left = `${p1.score} Lives: ${p1.lives} <-${p1.name.toUpperCase()}`;
+  const left = halfHeader(snakes[0], true);
   text({ u: 0, v: 0 }, left);
 
-  if (p2) {
-    const right = `${p2.name.toUpperCase()}-> Lives: ${p2.lives} ${p2.score}`;
+  if (snakes[1]) {
+    const right = halfHeader(snakes[1], false);
     const u = U_MAX - right.length * 2 + 1;
     text({ u, v: 0 }, right);
   }
@@ -571,9 +587,8 @@ function tick() {
     let collected = false;
     for (const sammy of snakes) {
       if (blit(sammy.front, CELL, WHITE, mature, { all: false })) {
-        // TODO tweak
         sammy.length += pickup * 4 * QUANTIZATION;
-        sammy.score += pickup * 10;
+        sammy.score += pickup * 100;
         collected = true;
       }
     }
