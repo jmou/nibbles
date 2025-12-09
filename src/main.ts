@@ -649,7 +649,7 @@ function tick() {
     }
 
     turn(snakes[0], PLAYER_1.DPAD, SPINNER_1.SPINNER);
-    if (snakes.length > 1) turn(snakes[1], PLAYER_1.DPAD, SPINNER_2.SPINNER);
+    if (snakes.length > 1) turn(snakes[1], PLAYER_2.DPAD, SPINNER_2.SPINNER);
 
     for (const sammy of snakes) {
       if (sammy.quantized && !quantumTick) {
