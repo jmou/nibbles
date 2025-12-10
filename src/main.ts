@@ -532,7 +532,8 @@ function add(pos: GridPosition, heading: Heading, distance: number = VELOCITY) {
 function dropPickup() {
   while (true) {
     const u = Math.floor(Math.random() * (U_MAX + 1));
-    const v = Math.floor(Math.random() * (V_MAX + 1));
+    // Do not place in header.
+    const v = Math.floor(Math.random() * V_MAX + 1);
 
     if (blit({ u, v }, GLYPHS[pickup], BLUE, mature)) {
       pickupPosition = { u, v };
