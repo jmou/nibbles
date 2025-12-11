@@ -18,7 +18,7 @@ const PIXELS_PER_ROW = SCREEN_HEIGHT / ROWS;
 const QUANTIZATION = 3;
 const VELOCITY = 1 / QUANTIZATION;
 
-type AppState = "title" | "pre" | "level" | "post";
+type AppState = "title" | "pre" | "level" | "post" | "continue";
 
 interface ScreenPosition {
   x: number;
@@ -292,6 +292,7 @@ let speed = 50;
 let level = 0;
 let clock = 0;
 let state: AppState = "title";
+let continueChoice = false;
 
 let tickHandle: number;
 function resetTickInterval() {
@@ -323,11 +324,23 @@ function title(msg: string = "Nibbles!") {
 }
 
 function lose() {
-  title("G A M E   O V E R");
+  continueScreen();
 }
 
 function win() {
   title("You win!");
+}
+
+function continueScreen() {
+  cls();
+  center(8, "G A M E   O V E R");
+  center(12, "Continue?");
+
+  const yText = continueChoice ? ">Y<" : " Y ";
+  const nText = continueChoice ? " N " : ">N<";
+  center(14, `${yText}   ${nText}`);
+
+  state = "continue";
 }
 
 function addSnake(name: string, color: Color) {
@@ -630,6 +643,28 @@ function tick() {
     }
   } else if (state === "post") {
     if (anyButton()) nextLevel();
+  } else if (state === "continue") {
+    if (PLAYER_1.DPAD.left || PLAYER_2.DPAD.left) {
+      continueChoice = true;
+      continueScreen();
+    } else if (PLAYER_1.DPAD.right || PLAYER_2.DPAD.right) {
+      continueChoice = false;
+      continueScreen();
+    } else if (anyButton()) {
+      if (continueChoice) {
+        continueChoice = false;
+        for (const sammy of snakes) {
+          sammy.lives = 5;
+          sammy.score -= 5000;
+          sammy.input.a = false;
+          sammy.input.b = false;
+        }
+        level--;
+        nextLevel();
+      } else {
+        title("G A M E   O V E R");
+      }
+    }
   } else if (state === "level") {
     // Skip level debug cheat.
     if (PLAYER_1.A && PLAYER_1.B && PLAYER_2.A && PLAYER_2.B) {
