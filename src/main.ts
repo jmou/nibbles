@@ -363,52 +363,52 @@ const LEVELS: Record<string, Level> = {
   },
   2: {
     spawns: [
-      [20, 43, LEFT],
-      [60, 7, RIGHT],
+      [21, 43, LEFT],
+      [60, 8, RIGHT],
     ],
-    walls: () => hrule(25, 20, 60),
+    walls: () => hrule(25, 21, 60),
   },
   3: {
     spawns: [
       [30, 25, DOWN],
-      [50, 25, UP],
+      [50, 26, UP],
     ],
     walls: () => {
-      vrule(20, 10, 40);
-      vrule(60, 10, 40);
+      vrule(20, 10, 41);
+      vrule(60, 10, 41);
     },
   },
   4: {
     spawns: [
       [20, 43, RIGHT],
-      [60, 7, LEFT],
+      [60, 8, LEFT],
     ],
     walls: () => {
-      vrule(20, 4, 30);
+      vrule(20, 4, 28);
       vrule(60, 23, 49);
-      hrule(38, 2, 40);
+      hrule(36, 2, 40);
       hrule(15, 41, 79);
     },
   },
   5: {
     spawns: [
       [30, 25, DOWN],
-      [50, 25, UP],
+      [50, 26, UP],
     ],
     walls: () => {
-      vrule(21, 13, 39);
-      vrule(59, 13, 39);
-      hrule(11, 23, 57);
+      vrule(21, 12, 39);
+      vrule(59, 12, 39);
+      hrule(10, 23, 57);
       hrule(41, 23, 57);
     },
   },
   6: {
     spawns: [
       [15, 43, UP],
-      [65, 7, DOWN],
+      [65, 8, DOWN],
     ],
     walls: () => {
-      for (let i = 4; i <= 49; i++) {
+      for (let i = 4; i <= 47; i++) {
         if (i > 30 || i < 23) {
           wall(i, 10);
           wall(i, 20);
@@ -424,10 +424,10 @@ const LEVELS: Record<string, Level> = {
   7: {
     spawns: [
       [15, 43, UP],
-      [65, 7, DOWN],
+      [65, 8, DOWN],
     ],
     walls: () => {
-      for (let i = 4; i <= 49; i += 2) {
+      for (let i = 4; i <= 47; i += 2) {
         wall(i, 40);
       }
     },
@@ -435,16 +435,16 @@ const LEVELS: Record<string, Level> = {
   8: {
     spawns: [
       [15, 43, UP],
-      [65, 7, DOWN],
+      [65, 8, DOWN],
     ],
     walls: () => {
       for (let i = 4; i <= 40; i++) {
         wall(i, 10);
-        wall(53 - i, 20);
+        wall(51 - i, 20);
         wall(i, 30);
-        wall(53 - i, 40);
+        wall(51 - i, 40);
         wall(i, 50);
-        wall(53 - i, 60);
+        wall(51 - i, 60);
         wall(i, 70);
       }
     },
@@ -452,7 +452,7 @@ const LEVELS: Record<string, Level> = {
   9: {
     spawns: [
       [5, 15, DOWN],
-      [75, 40, UP],
+      [75, 36, UP],
     ],
     walls: () => {
       for (let i = 6; i <= 45; i++) {
@@ -464,10 +464,10 @@ const LEVELS: Record<string, Level> = {
   10: {
     spawns: [
       [15, 43, UP],
-      [65, 7, DOWN],
+      [65, 8, DOWN],
     ],
     walls: () => {
-      for (let i = 4; i <= 49; i += 2) {
+      for (let i = 4; i <= 47; i += 2) {
         wall(i, 10);
         wall(i + 1, 20);
         wall(i, 30);
