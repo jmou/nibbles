@@ -69,7 +69,7 @@ interface Snake {
   heading: Heading;
   lives: number;
   score: number;
-  quantized: boolean;
+  quantized: boolean | null;
   name: string;
   color: Color;
   input: PlayerInput;
@@ -569,15 +569,18 @@ function turn(
     sammy.quantized = false;
   }
 
-  if (clock % QUANTIZATION !== 0) return;
+  if (sammy.quantized && clock % QUANTIZATION !== 0) return;
   let direction = sammy.input.dpad.shift();
 
   // Intentional bunny hopping.
   if (!direction && !sammy.quantized) {
-    if (dpad.up) direction = "UP";
-    else if (dpad.down) direction = "DOWN";
-    else if (dpad.left) direction = "LEFT";
-    else if (dpad.right) direction = "RIGHT";
+    sammy.quantized = null;
+    if (dpad.up) sammy.heading = UP;
+    else if (dpad.down) sammy.heading = DOWN;
+    else if (dpad.left) sammy.heading = LEFT;
+    else if (dpad.right) sammy.heading = RIGHT;
+    else sammy.quantized = false;
+    return;
   }
 
   if (direction === "UP" && sammy.heading !== DOWN) {
@@ -696,7 +699,8 @@ function tick() {
         sammy.front = add(
           sammy.front,
           sammy.heading,
-          sammy.quantized ? VELOCITY * QUANTIZATION : VELOCITY
+          // Quantized or bunny hopping speed up.
+          sammy.quantized || sammy.quantized == null ? VELOCITY * QUANTIZATION : VELOCITY
         );
         if (sammy.quantized) {
           // TODO can cause discontinuities
